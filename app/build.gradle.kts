@@ -61,6 +61,7 @@ android {
 
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
+    val liteRtLmVersion = "0.10.1"
 
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.activity:activity-compose:1.9.0")
@@ -82,7 +83,7 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
     // Official LiteRT-LM Android Kotlin API
-    implementation("com.google.ai.edge.litertlm:litertlm-android:0.10.1")
+    implementation("com.google.ai.edge.litertlm:litertlm-android:$liteRtLmVersion")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

@@ -8,7 +8,6 @@ import java.io.File
 class LiteRtLmModelLoader(
     private val config: BackendConfig
 ) {
-    private val supportedExtensions = setOf("litertlm", "task")
 
     fun resolveModelFile(selectedModelFileName: String?): File {
         val modelDir = File(config.modelDirectoryPath)
@@ -24,11 +23,15 @@ class LiteRtLmModelLoader(
             ?.takeIf { it.isNotBlank() }
             ?: config.defaultModelFileName
 
-        if (fileName.contains('/') || fileName.contains('\\')) {
-            throw BackendException(BackendError.InvalidModelPath(fileName))
+        if (!LiteRtLmModelSupport.isSafeFileName(fileName)) {
+            throw BackendException(BackendError.InvalidModelSelection(fileName))
         }
 
-        val file = File(modelDir, fileName)
+        val canonicalModelDir = modelDir.canonicalFile
+        val file = File(canonicalModelDir, fileName).canonicalFile
+        if (file.parentFile != canonicalModelDir) {
+            throw BackendException(BackendError.InvalidModelSelection(fileName))
+        }
         if (!file.exists()) {
             throw BackendException(BackendError.ModelFileMissing(file.absolutePath))
         }
@@ -36,8 +39,7 @@ class LiteRtLmModelLoader(
             throw BackendException(BackendError.InvalidModelPath(file.absolutePath))
         }
 
-        val extension = file.extension.lowercase()
-        if (extension !in supportedExtensions) {
+        if (!LiteRtLmModelSupport.isSupportedExtension(file.name)) {
             throw BackendException(BackendError.UnsupportedModelFile(file.absolutePath))
         }
 
