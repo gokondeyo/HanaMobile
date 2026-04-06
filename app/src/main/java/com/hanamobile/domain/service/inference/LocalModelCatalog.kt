@@ -5,6 +5,8 @@ import java.io.File
 
 class LocalModelCatalog(private val context: Context) {
 
+    private val supportedExtensions = setOf("litertlm", "task")
+
     fun modelDirectory(): File {
         val mediaRoot = context.externalMediaDirs.firstOrNull()
         val dir = File(mediaRoot ?: context.filesDir, "models")
@@ -16,5 +18,6 @@ class LocalModelCatalog(private val context: Context) {
         .listFiles()
         .orEmpty()
         .filter { it.isFile }
+        .filter { it.extension.lowercase() in supportedExtensions }
         .sortedBy { it.name.lowercase() }
 }
