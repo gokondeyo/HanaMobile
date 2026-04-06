@@ -16,6 +16,12 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "LITERT_DEFAULT_MODEL_FILE", '"model.task"')
+        buildConfigField("int", "LITERT_MAX_TOKENS", "256")
+        buildConfigField("int", "LITERT_TOP_K", "40")
+        buildConfigField("float", "LITERT_TEMPERATURE", "0.7f")
+        buildConfigField("int", "LITERT_RANDOM_SEED", "0")
     }
 
     buildTypes {
@@ -38,10 +44,17 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.14"
+    }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
     }
 }
 
@@ -66,6 +79,9 @@ dependencies {
     ksp("androidx.room:room-compiler:2.6.1")
 
     implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // LiteRT-LM runtime (Android LLM inference API)
+    implementation("com.google.mediapipe:tasks-genai:0.10.27")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

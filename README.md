@@ -33,8 +33,16 @@ Local-first Android assistant platform in Kotlin + Jetpack Compose.
 
 ## Integration points
 
-- Replace `MockLocalInferenceBackend` with llama.cpp / ExecuTorch / MediaPipe provider.
+- `LocalInferenceBackend` is now wired to `LiteRtLmLocalInferenceBackend` (LiteRT-LM runtime); keep backend-swappable adapters for llama.cpp / ExecuTorch / MediaPipe alternatives.
 - Replace `MockSpeechToTextEngine` and `MockTextToSpeechEngine` with platform or embedded models.
 - Attach web/tools via `ToolRegistry` + `ToolProvider` and inject `ToolResult` in `SessionManager`.
 - Attach image support via `ImageInputSource`, `ImagePreprocessor`, and `MultimodalRequestPackager`.
 - Attach soul-engine as optional `SoulEngineIntervention` between request assembly and final output.
+
+
+## LiteRT-LM backend quick setup
+
+- Dependency: `com.google.mediapipe:tasks-genai:0.10.27` in `app/build.gradle.kts`.
+- Model directory: `Android/media/com.hanamobile/models` (in-app model selection from files in `models/`).
+- Backend wiring: `HanaApplication` builds `BackendConfig` + `LocalModelCatalog` and injects `LiteRtLmLocalInferenceBackend` into `SessionManager`.
+- See `docs/litert-lm-backend.md` for troubleshooting and model swapping.

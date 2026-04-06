@@ -20,7 +20,8 @@ class MainActivity : ComponentActivity() {
             memoryManager = appContainer.memoryManager,
             stt = appContainer.stt,
             tts = appContainer.tts,
-            waveformAnimator = appContainer.waveformAnimator
+            waveformAnimator = appContainer.waveformAnimator,
+            modelCatalog = appContainer.modelCatalog
         )
     }
 

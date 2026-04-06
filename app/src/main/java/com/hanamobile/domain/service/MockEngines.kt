@@ -1,24 +1,13 @@
 package com.hanamobile.domain.service
 
-import com.hanamobile.core.extensions.LocalInferenceBackend
 import com.hanamobile.core.extensions.SpeechToTextEngine
 import com.hanamobile.core.extensions.TextToSpeechEngine
 import com.hanamobile.core.extensions.WaveformAnimator
-import com.hanamobile.core.model.BackendRequest
-import com.hanamobile.core.model.BackendResponse
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlin.random.Random
-
-class MockLocalInferenceBackend : LocalInferenceBackend {
-    override suspend fun generate(request: BackendRequest): BackendResponse {
-        delay(400)
-        val memoryHint = if (request.memoryBlock.isNotBlank()) " I considered your memory context." else ""
-        return BackendResponse(text = "(Mock Local Model) ${request.userInput.take(200)}.$memoryHint")
-    }
-}
 
 class MockSpeechToTextEngine : SpeechToTextEngine {
     private var partial = ""

@@ -46,9 +46,17 @@ class PromptRepositoryImpl(
         dao.upsertPreset(preset.copy(systemPrompt = DEFAULT_PROMPT, updatedAt = System.currentTimeMillis()))
     }
 
+    override fun observeActiveModelFileName(): Flow<String?> =
+        dao.observeSettingValue(ACTIVE_MODEL_FILE_KEY)
+
+    override suspend fun setActiveModelFileName(fileName: String) {
+        dao.putSetting(AppSettingEntity(ACTIVE_MODEL_FILE_KEY, fileName))
+    }
+
     companion object {
         const val ACTIVE_PROMPT_KEY = "active_prompt_id"
         const val DEFAULT_PRESET_ID = "default"
+        const val ACTIVE_MODEL_FILE_KEY = "active_model_file"
         const val DEFAULT_PROMPT = "You are Hana, a local-first assistant. Be clear, safe, and concise."
     }
 }
