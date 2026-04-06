@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.hanamobile.core.extensions.SpeechToTextEngine
 import com.hanamobile.core.extensions.TextToSpeechEngine
 import com.hanamobile.core.extensions.WaveformAnimator
+import com.hanamobile.core.model.BackendException
 import com.hanamobile.core.model.ChatMessage
 import com.hanamobile.core.model.MemoryCategory
 import com.hanamobile.core.model.MemoryEntry
@@ -18,6 +19,7 @@ import com.hanamobile.domain.repository.ChatSessionRepository
 import com.hanamobile.domain.repository.MemoryRepository
 import com.hanamobile.domain.repository.PromptRepository
 import com.hanamobile.domain.service.MemoryManager
+import com.hanamobile.domain.service.inference.LocalModelCatalog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -33,7 +35,8 @@ data class ChatUiState(
     val userInput: String = "",
     val pending: Boolean = false,
     val activePresetName: String = "Default",
-    val memoryPreview: String = ""
+    val memoryPreview: String = "",
+    val lastError: String? = null
 )
 
 class ChatViewModel(
@@ -50,11 +53,12 @@ class ChatViewModel(
     private val presetName = MutableStateFlow("Default")
     private val memoryPreview = MutableStateFlow("")
     private val sessionId = MutableStateFlow(UUID.randomUUID().toString())
+    private val lastError = MutableStateFlow<String?>(null)
 
     val state: StateFlow<ChatUiState> = combine(
-        messages, input, pending, presetName, memoryPreview, sessionId
-    ) { m, i, p, n, mem, sid ->
-        ChatUiState(sessionId = sid, messages = m, userInput = i, pending = p, activePresetName = n, memoryPreview = mem)
+        messages, input, pending, presetName, memoryPreview, sessionId, lastError
+    ) { m, i, p, n, mem, sid, err ->
+        ChatUiState(sessionId = sid, messages = m, userInput = i, pending = p, activePresetName = n, memoryPreview = mem, lastError = err)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ChatUiState())
 
     fun updateInput(value: String) { input.value = value }
@@ -62,6 +66,7 @@ class ChatViewModel(
     fun startNewSession() {
         messages.value = emptyList()
         sessionId.value = UUID.randomUUID().toString()
+        lastError.value = null
     }
 
     fun loadSession(sessionId: String) {
@@ -80,6 +85,7 @@ class ChatViewModel(
         viewModelScope.launch {
             pending.value = true
             val sid = sessionId.value
+            lastError.value = null
             val userMessage = ChatMessage(sessionId = sid, role = MessageRole.USER, content = userInput)
             messages.value = messages.value + userMessage
             sessionRepository.appendMessage(userMessage)
@@ -91,22 +97,29 @@ class ChatViewModel(
             val preview = memoryManager.buildPreview(globalMemory, emptyList())
             memoryPreview.value = preview.compiledText
 
-            val (_, response) = sessionManager.runTurn(
-                sessionId = sid,
-                preset = activePreset,
-                history = messages.value,
-                userInput = userInput,
-                globalMemory = globalMemory,
-                sessionMemory = emptyList()
-            )
-            if (preview.compiledText.isNotBlank()) {
-                val memMessage = sessionManager.toMemoryInjectionMessage(sid, preview.compiledText)
-                messages.value = messages.value + memMessage
+            try {
+                val (_, response) = sessionManager.runTurn(
+                    sessionId = sid,
+                    preset = activePreset,
+                    history = messages.value,
+                    userInput = userInput,
+                    globalMemory = globalMemory,
+                    sessionMemory = emptyList()
+                )
+                if (preview.compiledText.isNotBlank()) {
+                    val memMessage = sessionManager.toMemoryInjectionMessage(sid, preview.compiledText)
+                    messages.value = messages.value + memMessage
+                }
+                val assistant = ChatMessage(sessionId = sid, role = MessageRole.ASSISTANT, content = response.text)
+                messages.value = messages.value + assistant
+                sessionRepository.appendMessage(assistant)
+            } catch (e: BackendException) {
+                lastError.value = e.error.message
+            } catch (e: Throwable) {
+                lastError.value = e.message ?: "Unknown backend error"
+            } finally {
+                pending.value = false
             }
-            val assistant = ChatMessage(sessionId = sid, role = MessageRole.ASSISTANT, content = response.text)
-            messages.value = messages.value + assistant
-            sessionRepository.appendMessage(assistant)
-            pending.value = false
         }
     }
 }
@@ -114,23 +127,34 @@ class ChatViewModel(
 data class PromptUiState(
     val presets: List<PromptPreset> = emptyList(),
     val activePresetId: String = PromptRepositoryImpl.DEFAULT_PRESET_ID,
-    val editorText: String = ""
+    val editorText: String = "",
+    val modelDirectoryPath: String = "",
+    val availableModelFiles: List<String> = emptyList(),
+    val activeModelFile: String? = null
 )
 
 class PromptSettingsViewModel(
-    private val repository: PromptRepository
+    private val repository: PromptRepository,
+    private val modelCatalog: LocalModelCatalog
 ) : ViewModel() {
     private val editorText = MutableStateFlow("")
+
+    private val refreshModels = MutableStateFlow(0)
 
     val state: StateFlow<PromptUiState> = combine(
         repository.observePresets(),
         repository.observeActivePresetId(),
-        editorText
-    ) { presets, active, editor ->
+        editorText,
+        repository.observeActiveModelFileName(),
+        refreshModels
+    ) { presets, active, editor, activeModelFile, _ ->
         PromptUiState(
             presets = presets,
             activePresetId = active,
-            editorText = if (editor.isBlank()) presets.firstOrNull { it.id == active }?.systemPrompt ?: "" else editor
+            editorText = if (editor.isBlank()) presets.firstOrNull { it.id == active }?.systemPrompt ?: "" else editor,
+            modelDirectoryPath = modelCatalog.modelDirectory().absolutePath,
+            availableModelFiles = modelCatalog.listModelFiles().map { it.name },
+            activeModelFile = activeModelFile
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), PromptUiState())
 
@@ -149,6 +173,8 @@ class PromptSettingsViewModel(
     fun createPreset(name: String) { viewModelScope.launch { repository.upsertPreset(PromptPreset(name = name, systemPrompt = "")) } }
     fun renamePreset(id: String, newName: String) { viewModelScope.launch { repository.renamePreset(id, newName) } }
     fun deletePreset(id: String) { viewModelScope.launch { repository.deletePreset(id) } }
+    fun refreshModelFiles() { refreshModels.value += 1 }
+    fun setActiveModelFile(fileName: String) { viewModelScope.launch { repository.setActiveModelFileName(fileName) } }
 }
 
 data class MemoryUiState(
@@ -206,7 +232,8 @@ data class VoiceUiState(
     val state: VoicePipelineState = VoicePipelineState.IDLE,
     val transcript: String = "",
     val response: String = "",
-    val waveform: List<Float> = List(20) { 0f }
+    val waveform: List<Float> = List(20) { 0f },
+    val errorMessage: String? = null
 )
 
 class VoiceChatViewModel(
@@ -239,21 +266,27 @@ class VoiceChatViewModel(
     fun stopAndProcess(sessionId: String, history: List<ChatMessage>) {
         if (ui.value.state != VoicePipelineState.LISTENING) return
         viewModelScope.launch {
-            ui.value = ui.value.copy(state = VoicePipelineState.THINKING)
-            val text = stt.stopListening()
-            val preset = promptRepository.getActivePreset()
-            val globalMemory = memoryRepository.getActiveGlobal()
-            val (_, response) = sessionManager.runTurn(
-                sessionId = sessionId,
-                preset = preset,
-                history = history,
-                userInput = text,
-                globalMemory = globalMemory,
-                sessionMemory = emptyList()
-            )
-            ui.value = ui.value.copy(state = VoicePipelineState.SPEAKING, response = response.text)
-            tts.speak(response.text)
-            ui.value = ui.value.copy(state = VoicePipelineState.IDLE)
+            ui.value = ui.value.copy(state = VoicePipelineState.THINKING, errorMessage = null)
+            try {
+                val text = stt.stopListening()
+                val preset = promptRepository.getActivePreset()
+                val globalMemory = memoryRepository.getActiveGlobal()
+                val (_, response) = sessionManager.runTurn(
+                    sessionId = sessionId,
+                    preset = preset,
+                    history = history,
+                    userInput = text,
+                    globalMemory = globalMemory,
+                    sessionMemory = emptyList()
+                )
+                ui.value = ui.value.copy(state = VoicePipelineState.SPEAKING, response = response.text)
+                tts.speak(response.text)
+                ui.value = ui.value.copy(state = VoicePipelineState.IDLE)
+            } catch (e: BackendException) {
+                ui.value = ui.value.copy(state = VoicePipelineState.ERROR, errorMessage = e.error.message)
+            } catch (e: Throwable) {
+                ui.value = ui.value.copy(state = VoicePipelineState.ERROR, errorMessage = e.message ?: "Unknown backend error")
+            }
         }
     }
 
@@ -273,13 +306,14 @@ class HanaViewModelFactory(
     private val memoryManager: MemoryManager,
     private val stt: SpeechToTextEngine,
     private val tts: TextToSpeechEngine,
-    private val waveformAnimator: WaveformAnimator
+    private val waveformAnimator: WaveformAnimator,
+    private val modelCatalog: LocalModelCatalog
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         @Suppress("UNCHECKED_CAST")
         return when (modelClass) {
             ChatViewModel::class.java -> ChatViewModel(promptRepository, memoryRepository, sessionRepository, sessionManager, memoryManager)
-            PromptSettingsViewModel::class.java -> PromptSettingsViewModel(promptRepository)
+            PromptSettingsViewModel::class.java -> PromptSettingsViewModel(promptRepository, modelCatalog)
             MemorySettingsViewModel::class.java -> MemorySettingsViewModel(memoryRepository, memoryManager)
             SavedChatsViewModel::class.java -> SavedChatsViewModel(sessionRepository, promptRepository)
             VoiceChatViewModel::class.java -> VoiceChatViewModel(stt, tts, sessionManager, promptRepository, memoryRepository, waveformAnimator)

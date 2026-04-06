@@ -16,6 +16,8 @@ interface PromptRepository {
     suspend fun deletePreset(presetId: String)
     suspend fun setActivePreset(presetId: String)
     suspend fun resetPresetToDefault(presetId: String)
+    fun observeActiveModelFileName(): Flow<String?>
+    suspend fun setActiveModelFileName(fileName: String)
 }
 
 interface MemoryRepository {

@@ -8,6 +8,7 @@ import com.hanamobile.domain.repository.ChatSessionRepository
 import com.hanamobile.domain.repository.MemoryRepository
 import com.hanamobile.domain.repository.PromptRepository
 import com.hanamobile.domain.service.MemoryManager
+import com.hanamobile.domain.service.inference.LocalModelCatalog
 
 class AppContainer(
     val promptRepository: PromptRepository,
@@ -17,5 +18,6 @@ class AppContainer(
     val memoryManager: MemoryManager,
     val stt: SpeechToTextEngine,
     val tts: TextToSpeechEngine,
-    val waveformAnimator: WaveformAnimator
+    val waveformAnimator: WaveformAnimator,
+    val modelCatalog: LocalModelCatalog
 )

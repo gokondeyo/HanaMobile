@@ -68,7 +68,9 @@ fun HanaNavHost(
                 onCreatePreset = promptVm::createPreset,
                 onRenamePreset = promptVm::renamePreset,
                 onDeletePreset = promptVm::deletePreset,
-                onApplyPreset = promptVm::setActivePreset
+                onApplyPreset = promptVm::setActivePreset,
+                onRefreshModels = promptVm::refreshModelFiles,
+                onApplyModel = promptVm::setActiveModelFile
             )
         }
         composable(Destinations.MEMORY) {

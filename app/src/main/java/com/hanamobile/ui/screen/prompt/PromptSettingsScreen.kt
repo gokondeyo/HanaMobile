@@ -29,7 +29,9 @@ fun PromptSettingsScreen(
     onCreatePreset: (String) -> Unit,
     onRenamePreset: (String, String) -> Unit,
     onDeletePreset: (String) -> Unit,
-    onApplyPreset: (String) -> Unit
+    onApplyPreset: (String) -> Unit,
+    onRefreshModels: () -> Unit,
+    onApplyModel: (String) -> Unit
 ) {
     val newName = remember { mutableStateOf("") }
     Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -43,6 +45,29 @@ fun PromptSettingsScreen(
 
         OutlinedTextField(newName.value, { newName.value = it }, label = { Text("Preset name") })
         Button(onClick = { if (newName.value.isNotBlank()) onCreatePreset(newName.value) }) { Text("Create Preset") }
+
+        Text("Model Directory: ${state.modelDirectoryPath}")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = onRefreshModels) { Text("Refresh Models") }
+        }
+
+        if (state.availableModelFiles.isEmpty()) {
+            Text("No model files found in models directory.")
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(state.availableModelFiles, key = { it }) { modelFile ->
+                    Card(Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("$modelFile${if (modelFile == state.activeModelFile) " (Active)" else ""}")
+                            Button(onClick = { onApplyModel(modelFile) }) { Text("Use") }
+                        }
+                    }
+                }
+            }
+        }
 
         LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             items(state.presets, key = { it.id }) { preset ->
