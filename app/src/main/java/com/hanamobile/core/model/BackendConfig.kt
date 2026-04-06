@@ -22,7 +22,10 @@ sealed class BackendError(val message: String, val cause: Throwable? = null) {
     class ModelFileMissing(path: String) : BackendError("Model file was not found at: $path")
     class InvalidModelPath(path: String) : BackendError("Model path is invalid: $path")
     class UnsupportedModelFile(path: String) :
-        BackendError("Unsupported model file type: $path. Expected .litertlm or .task")
+        BackendError("Unsupported model file type: $path. Expected .litertlm")
+
+    class InvalidModelSelection(fileName: String) :
+        BackendError("Invalid model selection: $fileName")
 
     class ModelInitializationFailure(details: String, cause: Throwable? = null) :
         BackendError("Failed to initialize LiteRT-LM backend: $details", cause)

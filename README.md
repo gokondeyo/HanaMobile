@@ -42,6 +42,6 @@ Local-first Android assistant platform in Kotlin + Jetpack Compose.
 
 - Dependency: `com.google.ai.edge.litertlm:litertlm-android:0.10.1` in `app/build.gradle.kts`.
 - Model directory: `Android/media/com.hanamobile/models` (in-app model selection from files in `models/`).
-- Supported local model files: `.litertlm` and `.task`.
+- Supported local model files: `.litertlm`.
 - Backend wiring: `HanaApplication` builds `BackendConfig` + `LocalModelCatalog` and injects `LiteRtLmLocalInferenceBackend` into `SessionManager`.
 - See `docs/litert-lm-backend.md` for troubleshooting and model swapping.
