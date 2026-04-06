@@ -17,9 +17,10 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "LITERT_DEFAULT_MODEL_FILE", '"model.task"')
+        buildConfigField("String", "LITERT_DEFAULT_MODEL_FILE", '"model.litertlm"')
         buildConfigField("int", "LITERT_MAX_TOKENS", "256")
         buildConfigField("int", "LITERT_TOP_K", "40")
+        buildConfigField("float", "LITERT_TOP_P", "0.95f")
         buildConfigField("float", "LITERT_TEMPERATURE", "0.7f")
         buildConfigField("int", "LITERT_RANDOM_SEED", "0")
     }
@@ -80,8 +81,8 @@ dependencies {
 
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
-    // LiteRT-LM runtime (Android LLM inference API)
-    implementation("com.google.mediapipe:tasks-genai:0.10.27")
+    // Official LiteRT-LM Android Kotlin API
+    implementation("com.google.ai.edge.litertlm:litertlm-android:0.10.1")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

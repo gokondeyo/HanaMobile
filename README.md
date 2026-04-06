@@ -11,6 +11,7 @@ Local-first Android assistant platform in Kotlin + Jetpack Compose.
   - `core/extensions/` backend/STT/TTS/waveform/tools/multimodal/soul interfaces
   - `domain/repository/` repository abstractions
   - `domain/service/` orchestration services (`MemoryManager`) + mock engines
+  - `domain/service/inference/` local-model backend integrations (LiteRT-LM and swappable alternatives)
   - `data/local/` Room database/DAO/entities
   - `data/repository/` repository implementations + mappers
   - `ui/viewmodel/` ViewModel + StateFlow UI states
@@ -33,16 +34,14 @@ Local-first Android assistant platform in Kotlin + Jetpack Compose.
 
 ## Integration points
 
-- `LocalInferenceBackend` is now wired to `LiteRtLmLocalInferenceBackend` (LiteRT-LM runtime); keep backend-swappable adapters for llama.cpp / ExecuTorch / MediaPipe alternatives.
-- Replace `MockSpeechToTextEngine` and `MockTextToSpeechEngine` with platform or embedded models.
-- Attach web/tools via `ToolRegistry` + `ToolProvider` and inject `ToolResult` in `SessionManager`.
-- Attach image support via `ImageInputSource`, `ImagePreprocessor`, and `MultimodalRequestPackager`.
-- Attach soul-engine as optional `SoulEngineIntervention` between request assembly and final output.
-
+- `LocalInferenceBackend` is wired to `LiteRtLmLocalInferenceBackend` with the **official typed LiteRT-LM API** (`Engine`, `EngineConfig`, `ConversationConfig`, `SamplerConfig`).
+- Backend remains swappable for future llama.cpp / ExecuTorch / MediaPipe alternatives.
+- Replace `MockSpeechToTextEngine` and `MockTextToSpeechEngine` with platform or embedded models as needed.
 
 ## LiteRT-LM backend quick setup
 
-- Dependency: `com.google.mediapipe:tasks-genai:0.10.27` in `app/build.gradle.kts`.
+- Dependency: `com.google.ai.edge.litertlm:litertlm-android:0.10.1` in `app/build.gradle.kts`.
 - Model directory: `Android/media/com.hanamobile/models` (in-app model selection from files in `models/`).
+- Supported local model files: `.litertlm` and `.task`.
 - Backend wiring: `HanaApplication` builds `BackendConfig` + `LocalModelCatalog` and injects `LiteRtLmLocalInferenceBackend` into `SessionManager`.
 - See `docs/litert-lm-backend.md` for troubleshooting and model swapping.

@@ -37,13 +37,13 @@ class HanaApplication : Application() {
             generation = GenerationConfig(
                 maxTokens = BuildConfig.LITERT_MAX_TOKENS,
                 topK = BuildConfig.LITERT_TOP_K,
+                topP = BuildConfig.LITERT_TOP_P,
                 temperature = BuildConfig.LITERT_TEMPERATURE,
                 randomSeed = BuildConfig.LITERT_RANDOM_SEED
             )
         )
 
         val localInferenceBackend = LiteRtLmLocalInferenceBackend(
-            context = applicationContext,
             config = backendConfig,
             selectedModelProvider = {
                 promptRepository.observeActiveModelFileName().first()
