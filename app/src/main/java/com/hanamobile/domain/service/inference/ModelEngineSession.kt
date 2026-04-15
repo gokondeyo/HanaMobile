@@ -3,15 +3,15 @@ package com.hanamobile.domain.service.inference
 /**
  * Reuses a single engine per model path and safely recreates on model switch.
  */
-internal class ModelEngineSession<T : AutoCloseable> {
+internal class ModelEngineSession<K, T : AutoCloseable> {
     @Volatile
-    private var holder: Holder<T>? = null
+    private var holder: Holder<K, T>? = null
 
-    fun currentOrNull(modelPath: String): T? = holder?.takeIf { it.modelPath == modelPath }?.engine
+    fun currentOrNull(key: K): T? = holder?.takeIf { it.key == key }?.engine
 
-    fun swap(modelPath: String, newEngine: T): T {
+    fun swap(key: K, newEngine: T): T {
         val previous = holder
-        holder = Holder(modelPath = modelPath, engine = newEngine)
+        holder = Holder(key = key, engine = newEngine)
         previous?.engine?.close()
         return newEngine
     }
@@ -22,8 +22,8 @@ internal class ModelEngineSession<T : AutoCloseable> {
         existing.engine.close()
     }
 
-    private data class Holder<T : AutoCloseable>(
-        val modelPath: String,
+    private data class Holder<K, T : AutoCloseable>(
+        val key: K,
         val engine: T
     )
 }

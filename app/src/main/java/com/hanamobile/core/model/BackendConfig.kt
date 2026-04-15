@@ -20,6 +20,7 @@ data class GenerationConfig(
 )
 
 data class RuntimeConfig(
+    // Reserved for future engine-target selection support.
     val executionTarget: ExecutionTarget = ExecutionTarget.CPU_COMPAT
 )
 

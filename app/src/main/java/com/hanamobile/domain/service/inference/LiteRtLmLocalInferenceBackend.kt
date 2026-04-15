@@ -9,6 +9,7 @@ import com.hanamobile.core.model.BackendError
 import com.hanamobile.core.model.BackendException
 import com.hanamobile.core.model.BackendRequest
 import com.hanamobile.core.model.BackendResponse
+import com.hanamobile.core.model.RuntimeConfig
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -33,7 +34,7 @@ class LiteRtLmLocalInferenceBackend(
 ) : StreamingLocalInferenceBackend {
 
     private val initLock = Mutex()
-    private val engineSession = ModelEngineSession<Engine>()
+    private val engineSession = ModelEngineSession<EngineRuntimeSignature, Engine>()
 
     override suspend fun generate(request: BackendRequest): BackendResponse {
         val chunks = mutableListOf<String>()
@@ -56,7 +57,11 @@ class LiteRtLmLocalInferenceBackend(
 
     override fun generateStream(request: BackendRequest): Flow<String> = flow {
         val modelFile = currentModelFile()
-        val engine = ensureEngineInitialized(modelFile.absolutePath)
+        val runtimeSignature = EngineRuntimeSignature(
+            canonicalModelPath = modelFile.absolutePath,
+            runtimeConfig = config.runtime
+        )
+        val engine = ensureEngineInitialized(runtimeSignature)
         val prompt = promptFormatter.format(request)
 
         val conversationConfig = ConversationConfig(
@@ -92,19 +97,19 @@ class LiteRtLmLocalInferenceBackend(
         modelLoader.resolveModelFile(selectedModel)
     }
 
-    private suspend fun ensureEngineInitialized(modelPath: String): Engine {
-        // Re-init only when there is no engine yet, or when selected canonical model path changed.
-        engineSession.currentOrNull(modelPath)?.let { return it }
+    private suspend fun ensureEngineInitialized(signature: EngineRuntimeSignature): Engine {
+        // Re-init only when there is no engine yet, or runtime signature changed.
+        engineSession.currentOrNull(signature)?.let { return it }
 
         return initLock.withLock {
-            engineSession.currentOrNull(modelPath)?.let { return@withLock it }
+            engineSession.currentOrNull(signature)?.let { return@withLock it }
 
             withContext(workerDispatcher) {
                 try {
                     GenerationConfigValidator.validate(config.generation)
-                    val engine = engineFactory.create(createEngineConfig(modelPath))
+                    val engine = engineFactory.create(createEngineConfig(signature))
                     engine.initialize()
-                    engineSession.swap(modelPath = modelPath, newEngine = engine)
+                    engineSession.swap(key = signature, newEngine = engine)
                 } catch (e: BackendException) {
                     throw e
                 } catch (e: Throwable) {
@@ -114,10 +119,11 @@ class LiteRtLmLocalInferenceBackend(
         }
     }
 
-    private fun createEngineConfig(modelPath: String): EngineConfig {
-        // Keep CPU-compatible default while retaining an explicit switch for future GPU/NPU rollout.
-        // Official LiteRT-LM runtime target preference is kept in config.runtime.executionTarget.
-        return EngineConfig(modelPath = modelPath)
+    private fun createEngineConfig(signature: EngineRuntimeSignature): EngineConfig {
+        // Note: litertlm-android:0.10.1 in this repo uses modelPath-based EngineConfig construction.
+        // executionTarget is tracked in signature/cache keys for future API support, but not yet applied
+        // to engine creation arguments in this version.
+        return EngineConfig(modelPath = signature.canonicalModelPath)
     }
 
     private fun mapInitializationError(e: Throwable): BackendException =
@@ -131,6 +137,11 @@ class LiteRtLmLocalInferenceBackend(
     private fun mapLifecycleError(e: Throwable): BackendException =
         BackendException(BackendError.EngineLifecycleFailure(e.message ?: "Unknown lifecycle error", e))
 }
+
+private data class EngineRuntimeSignature(
+    val canonicalModelPath: String,
+    val runtimeConfig: RuntimeConfig
+)
 
 fun interface LiteRtLmEngineFactory {
     fun create(config: EngineConfig): Engine

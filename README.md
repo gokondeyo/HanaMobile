@@ -45,7 +45,8 @@ Local-first Android assistant platform in Kotlin + Jetpack Compose.
 - Supported local model files: **`.litertlm` only**.
 - Backend wiring: `HanaApplication` uses `LiteRtLmBackendProvider` to build `BackendConfig` + `LocalModelCatalog` and inject `LiteRtLmLocalInferenceBackend` into `SessionManager`.
 - See `docs/litert-lm-backend.md` for troubleshooting and model swapping.
-- 엔진 재초기화 조건: 엔진 미존재 또는 canonical model path 변경시에만 재초기화
+- 엔진 재초기화 조건: 엔진 미존재, 또는 runtime signature( canonical model path + runtime config ) 변경시에만 재초기화
+- `executionTarget`는 현재 예약 필드이며, 이 버전에서는 엔진 생성 인자로 아직 직접 반영되지 않음
 
 ## Model filename policy
 

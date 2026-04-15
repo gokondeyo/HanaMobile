@@ -63,12 +63,12 @@ Validation is centralized in `GenerationConfigValidator` and fails early on inva
 
 ## Execution target configuration
 
-`BackendConfig.runtime.executionTarget` provides extension points for CPU/GPU/NPU rollout.
+`BackendConfig.runtime.executionTarget` is currently a **reserved runtime signature field** for future CPU/GPU/NPU rollout.
 
-- default: `CPU_COMPAT` (가장 호환성이 높은 안전한 기본값)
-- expandable: `GPU_PREFERRED`, `NPU_PREFERRED`
+- default: `CPU_COMPAT`
+- placeholders: `GPU_PREFERRED`, `NPU_PREFERRED`
 
-Current implementation keeps the default CPU-compatible path while preserving explicit runtime target config for future acceleration rollout.
+In `litertlm-android:0.10.1` usage in this repo, engine creation still uses `EngineConfig(modelPath=...)`. The execution target is not yet applied to engine construction arguments; it is included in the engine runtime signature to prevent cache/reuse bugs when target selection becomes active later.
 
 ## Failure troubleshooting
 

@@ -9,7 +9,7 @@ class ModelEngineSessionTest {
 
     @Test
     fun recreatesEngineWhenModelPathChanges() {
-        val session = ModelEngineSession<FakeEngine>()
+        val session = ModelEngineSession<String, FakeEngine>()
         val first = FakeEngine("first")
         val second = FakeEngine("second")
 
@@ -22,7 +22,7 @@ class ModelEngineSessionTest {
 
     @Test
     fun reusesEngineForSamePath() {
-        val session = ModelEngineSession<FakeEngine>()
+        val session = ModelEngineSession<String, FakeEngine>()
         val first = FakeEngine("first")
         session.swap("/models/a.litertlm", first)
 
@@ -31,7 +31,7 @@ class ModelEngineSessionTest {
 
     @Test
     fun closesCurrentEngineOnClose() {
-        val session = ModelEngineSession<FakeEngine>()
+        val session = ModelEngineSession<String, FakeEngine>()
         val engine = FakeEngine("engine")
         session.swap("/models/a.litertlm", engine)
 
