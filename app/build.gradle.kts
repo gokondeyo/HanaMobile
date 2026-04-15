@@ -17,7 +17,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "LITERT_DEFAULT_MODEL_FILE", '"model.litertlm"')
+        buildConfigField("String", "LITERT_DEFAULT_MODEL_FILE", "\"model.litertlm\"")
         buildConfigField("int", "LITERT_MAX_TOKENS", "256")
         buildConfigField("int", "LITERT_TOP_K", "40")
         buildConfigField("float", "LITERT_TOP_P", "0.95f")
