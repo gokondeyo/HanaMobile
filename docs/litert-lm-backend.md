@@ -30,7 +30,6 @@ From Prompt Settings screen, users can refresh model list and choose an active m
 Supported file extensions:
 
 - `.litertlm`
-- `.task`
 
 ## Generation settings
 
@@ -57,6 +56,6 @@ The selected model filename is stored in app settings and used by `LiteRtLmModel
 
 - **No models visible**: ensure files are in `Android/media/com.hanamobile/models` and use a supported extension.
 - **Model file missing**: selected file was removed; choose another model in Prompt Settings.
-- **Unsupported model file**: file extension is not `.litertlm` or `.task`.
+- **Unsupported model file**: file extension is not `.litertlm`.
 - **Model initialization fails**: model/device/runtime mismatch, invalid model package, or native init failure.
 - **Generation fails**: check prompt length/model compatibility and generation parameter values.

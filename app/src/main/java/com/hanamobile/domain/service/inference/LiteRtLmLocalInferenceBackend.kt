@@ -36,15 +36,8 @@ class LiteRtLmLocalInferenceBackend(
         val modelFile = modelLoader.resolveModelFile(selectedModel)
         val engine = ensureEngineInitialized(modelFile.absolutePath)
 
-        val generation = config.generation
         val conversationConfig = ConversationConfig(
-            samplerConfig = SamplerConfig(
-                topK = generation.topK,
-                topP = generation.topP,
-                temperature = generation.temperature,
-                maxTokens = generation.maxTokens,
-                randomSeed = generation.randomSeed.toLong()
-            )
+            samplerConfig = createSamplerConfig()
         )
 
         try {
@@ -60,7 +53,8 @@ class LiteRtLmLocalInferenceBackend(
                 text = output,
                 diagnostics = mapOf(
                     "backend" to config.backendId,
-                    "modelPath" to modelFile.absolutePath
+                    "modelPath" to modelFile.absolutePath,
+                    "modelFile" to modelFile.name
                 )
             )
         } catch (e: BackendException) {
@@ -76,11 +70,7 @@ class LiteRtLmLocalInferenceBackend(
         return initLock.withLock {
             engineHolder?.takeIf { it.modelPath == modelPath }?.let { return@withLock it.engine }
 
-            val generation = config.generation
-            if (generation.maxTokens <= 0) throw BackendException(BackendError.UnsupportedSetting("maxTokens must be > 0"))
-            if (generation.topK <= 0) throw BackendException(BackendError.UnsupportedSetting("topK must be > 0"))
-            if (generation.topP !in 0f..1f) throw BackendException(BackendError.UnsupportedSetting("topP must be in [0, 1]"))
-            if (generation.temperature < 0f) throw BackendException(BackendError.UnsupportedSetting("temperature must be >= 0"))
+            validateGenerationSettings()
 
             closeEngineIfAny()
 
@@ -98,6 +88,26 @@ class LiteRtLmLocalInferenceBackend(
                 )
             }
         }
+    }
+
+    private fun validateGenerationSettings() {
+        val generation = config.generation
+        if (generation.maxTokens <= 0) throw BackendException(BackendError.UnsupportedSetting("maxTokens must be > 0"))
+        if (generation.topK <= 0) throw BackendException(BackendError.UnsupportedSetting("topK must be > 0"))
+        if (generation.topP !in 0f..1f) throw BackendException(BackendError.UnsupportedSetting("topP must be in [0, 1]"))
+        if (generation.temperature < 0f) throw BackendException(BackendError.UnsupportedSetting("temperature must be >= 0"))
+        if (generation.randomSeed < 0) throw BackendException(BackendError.UnsupportedSetting("randomSeed must be >= 0"))
+    }
+
+    private fun createSamplerConfig(): SamplerConfig {
+        val generation = config.generation
+        return SamplerConfig(
+            topK = generation.topK,
+            topP = generation.topP,
+            temperature = generation.temperature,
+            maxTokens = generation.maxTokens,
+            randomSeed = generation.randomSeed.toLong()
+        )
     }
 
     private fun closeEngineIfAny() {
